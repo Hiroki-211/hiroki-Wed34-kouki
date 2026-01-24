@@ -75,8 +75,6 @@ aptの場合(debian ubuntu などの場合)
 
 掲示板の投稿を保存するテーブルを作成する  
 
-電子掲示板(= BBS)の投稿(= entry)を保存するため、`bbs_entries'というテーブル名にします
-
     CREATE TABLE `bbs_entries` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         `body` TEXT NOT NULL,
@@ -86,5 +84,5 @@ aptの場合(debian ubuntu などの場合)
 
 上記のコマンドで起動できたら、ウェブブラウザでEC2インスタンスのホスト名またはIPアドレス(SSHでログインするときと同じもの)に接続する。  
 
-ブラウザのURLに`http://IPアドレス/bbs.php`と入力して開いてみる  
-掲示板が表示されたら成功
+ブラウザのURLに`http://IPアドレス/timeline.php`と入力して開いてみる
+ログイン画面にリダイレクトし、ログイン後タイムラインが表示されたら成功
