@@ -3,7 +3,7 @@ session_start();
 if (empty($_SESSION['login_user_id'])) {  // 非ログインの場合利用不可
   header("HTTP/1.1 302 Found");
   header("Location: /login.php");
-  exit;  // return; から exit; に変更
+  exit;
 }
 
 // DBに接続
@@ -19,37 +19,58 @@ $user = $user_sth->fetch(PDO::FETCH_ASSOC);
 // 投稿処理
 if (isset($_POST['body']) && !empty($_SESSION['login_user_id'])){
 
-  $image_filename = null;
+  // 画像ファイル名を配列で管理（最大4枚）
+  $image_filenames = [null, null, null, null];
+
+  // 画像が送られてきた場合（JSON配列として）
   if (!empty($_POST['image_base64'])) {
-    // 先頭の data:~base64, のところは削る
-    $base64 = preg_replace('/^data:.+base64,/', '', $_POST['image_base64']);
+    // JSON文字列をデコード
+    $image_base64_array = json_decode($_POST['image_base64'], true);
+    
+    // 配列でない場合は単一の値として処理
+    if (!is_array($image_base64_array)) {
+      $image_base64_array = [$_POST['image_base64']];
+    }
 
-    // base64からバイナリにデコードする
-    $image_binary = base64_decode($base64);
+    // 最大4枚まで処理
+    for ($i = 0; $i < min(4, count($image_base64_array)); $i++) {
+      if (!empty($image_base64_array[$i])) {
+        // 先頭の data:~base64, のところは削る
+        $base64 = preg_replace('/^data:.+base64,/', '', $image_base64_array[$i]);
 
-    // 新しいファイル名を決めてバイナリを出力する
-    $image_filename = strval(time()) . bin2hex(random_bytes(25)) . '.png';
-    $filepath = '/var/www/upload/image/' . $image_filename;
-    file_put_contents($filepath, $image_binary);
+        // base64からバイナリにデコードする
+        $image_binary = base64_decode($base64);
+
+        // 新しいファイル名を決めてバイナリを出力する
+        $image_filename = strval(time()) . bin2hex(random_bytes(25)) . '.png';
+        $filepath = '/var/www/upload/image/' . $image_filename;
+        file_put_contents($filepath, $image_binary);
+
+        $image_filenames[$i] = $image_filename;
+      }
+    }
   }
 
-  // insertする
-  $insert_sth = $dbh->prepare("INSERT INTO posts (user_id, content, image_filename1) VALUES (:user_id, :content, :image_filename1)");
+  // insertする（4つの画像カラムに対応）
+  $insert_sth = $dbh->prepare("INSERT INTO posts (user_id, content, image_filename1, image_filename2, image_filename3, image_filename4) VALUES (:user_id, :content, :image_filename1, :image_filename2, :image_filename3, :image_filename4)");
   $insert_sth->execute([
-    ':user_id' => $_SESSION['login_user_id'], // ログインしている会員情報の主キー
-    ':content' => $_POST['body'], // フォームから送られてきた投稿本文
-    ':image_filename1' => $image_filename,  // 保存した画像の名前（nullの場合もある）
+    ':user_id' => $_SESSION['login_user_id'],
+    ':content' => $_POST['body'],
+    ':image_filename1' => $image_filenames[0],
+    ':image_filename2' => $image_filenames[1],
+    ':image_filename3' => $image_filenames[2],
+    ':image_filename4' => $image_filenames[3],
   ]);
 
   // 処理が終わったらリダイレクトする
   // リダイレクトしないと、リロード時にまた同じ内容でPOSTすることになる
   header("HTTP/1.1 303 See Other");
-  header("Location: ./timeline.php");  // location から Location に変更
-  exit;  // return; から exit; に変更
+  header("Location: ./timeline.php");
+  exit;
 }
 
 // LIMITとOFFSETを指定
-$limit = max(5, min(50, (int)($_GET['limit'] ?? 20)));  // 上限を50に変更
+$limit = max(5, min(50, (int)($_GET['limit'] ?? 20)));
 $offset = max(0, (int)($_GET['offset'] ?? 0));
 
 // 投稿データを取得
@@ -79,7 +100,7 @@ if (!empty($_GET['ajax'])) {
 }
 
 // bodyのHTMLを出力するための関数を用意する
-function bodyFilter (?string $body): string  // ← string から ?string に変更（null対応）
+function bodyFilter (?string $body): string
 {
   if ($body === null || $body === '') {
     return '';
@@ -106,12 +127,18 @@ function bodyFilter (?string $body): string  // ← string から ?string に変
     <div>
       現在 <?= htmlspecialchars($user['username']) ?> (ID: <?= htmlspecialchars($user['id']) ?>)さんでログイン中
     </div>
+    <div style="margin-bottom: 1em;">
+      <a href="/setting/index.php">設定画面</a>
+      /
+      <a href="/users.php">会員一覧画面</a>
+    </div>
     
     <!-- 投稿フォーム -->
     <form method="POST" action="./timeline.php">
       <textarea name="body" required></textarea>
       <div style="margin: 1em 0;">
-        <input type="file" accept="image/*" name="image" id="imageInput">
+        <label>画像（最大4枚）</label>
+        <input type="file" accept="image/*" name="image" id="imageInput" multiple>
       </div>
       <input id="imageBase64Input" type="hidden" name="image_base64">
       <canvas id="imageCanvas" style="display: none;"></canvas>
@@ -126,6 +153,71 @@ function bodyFilter (?string $body): string  // ← string から ?string に変
     <div id="sentinel" style="height: 1px;"></div>
 
     <script>
+    // 画像処理（最大4枚）
+    document.addEventListener('DOMContentLoaded', function() {
+      const imageInput = document.getElementById('imageInput');
+      const imageBase64Input = document.getElementById('imageBase64Input');
+      const canvas = document.getElementById('imageCanvas');
+
+      imageInput.addEventListener('change', function() {
+        if (imageInput.files.length < 1) {
+          imageBase64Input.value = '';
+          return;
+        }
+
+        // 最大4枚まで処理
+        const files = Array.from(imageInput.files).slice(0, 4);
+        const base64Array = [];
+        let processedCount = 0;
+
+        files.forEach((file) => {
+          if (!file.type.startsWith('image/')) {
+            processedCount++;
+            if (processedCount === files.length) {
+              imageBase64Input.value = JSON.stringify(base64Array);
+            }
+            return;
+          }
+
+          const reader = new FileReader();
+          const image = new Image();
+
+          reader.onload = () => {
+            image.onload = () => {
+              const originalWidth = image.naturalWidth;
+              const originalHeight = image.naturalHeight;
+              const maxLength = 1000;
+
+              if (originalWidth <= maxLength && originalHeight <= maxLength) {
+                canvas.width = originalWidth;
+                canvas.height = originalHeight;
+              } else if (originalWidth > originalHeight) {
+                canvas.width = maxLength;
+                canvas.height = maxLength * originalHeight / originalWidth;
+              } else {
+                canvas.width = maxLength * originalWidth / originalHeight;
+                canvas.height = maxLength;
+              }
+
+              const context = canvas.getContext('2d');
+              context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+              const base64 = canvas.toDataURL();
+              base64Array.push(base64);
+
+              processedCount++;
+
+              if (processedCount === files.length) {
+                imageBase64Input.value = JSON.stringify(base64Array);
+              }
+            };
+            image.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    });
+
     // 無限スクロール
     const limit = 20;
     let offset = 0;
@@ -157,6 +249,25 @@ function bodyFilter (?string $body): string  // ← string から ?string に変
         postElement.style.paddingBottom = '1em';
         postElement.style.borderBottom = '1px solid #ccc';
         
+        // 画像を配列で取得（nullでないもののみ）
+        const images = [];
+        for (let i = 1; i <= 4; i++) {
+          const imageKey = 'image_filename' + i;
+          if (p[imageKey]) {
+            images.push(p[imageKey]);
+          }
+        }
+
+        // 画像表示用のHTMLを生成（2列グリッド）
+        let imagesHtml = '';
+        if (images.length > 0) {
+          imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 10px;">';
+          images.forEach(img => {
+            imagesHtml += `<div><img src="/image/${escapeHtml(img)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; max-height: 200px;"></div>`;
+          });
+          imagesHtml += '</div>';
+        }
+        
         postElement.innerHTML = `
           <dt id="entry${p.id}">番号</dt>
           <dd>${escapeHtml(p.id)}</dd>
@@ -172,7 +283,7 @@ function bodyFilter (?string $body): string  // ← string から ?string に変
           <dt>内容</dt>
           <dd>
             ${escapeHtml(p.content ?? '')}
-            ${p.image_filename1 ? `<div><img src="/upload/image/${escapeHtml(p.image_filename1)}" style="max-height: 10em;"></div>` : ''}
+            ${imagesHtml}
           </dd>
         `;
         container.appendChild(postElement);
