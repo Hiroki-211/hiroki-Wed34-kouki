@@ -121,20 +121,23 @@ function bodyFilter (?string $body): string
 <head>
     <meta charset="UTF-8">
     <title>タイムライン</title>
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
 </head>
 <body>
-    <!-- ヘッダー部分 -->
-    <div>
-      現在 <?= htmlspecialchars($user['username']) ?> (ID: <?= htmlspecialchars($user['id']) ?>)さんでログイン中
-    </div>
-    <div style="margin-bottom: 1em;">
-      <a href="/setting/index.php">設定画面</a>
-      /
-      <a href="/users.php">会員一覧画面</a>
-    </div>
+  <!-- ヘッダー部分 -->
+  <div>
+    現在 <?= htmlspecialchars($user['username']) ?> (ID: <?= htmlspecialchars($user['id']) ?>)さんでログイン中
+  </div>
+
+  <div style="margin-bottom: 1em;">
+    <a href="/setting/index.php">設定画面</a>
+    /
+    <a href="/users.php">会員一覧画面</a>
+  </div>
     
-    <!-- 投稿フォーム -->
-    <form method="POST" action="./timeline.php">
+  <!-- 投稿フォーム -->
+  <form method="POST" action="./timeline.php">
       <textarea name="body" required></textarea>
       <div style="margin: 1em 0;">
         <label>画像（最大4枚）</label>
@@ -147,173 +150,173 @@ function bodyFilter (?string $body): string
     <hr>
 
     <!-- 投稿を表示するコンテナ（JavaScriptで描画される） -->
-    <div id="posts"></div>
+    <div class="container" id="posts"></div>
     
     <!-- スクロール監視用の要素 -->
     <div id="sentinel" style="height: 1px;"></div>
+  <script>
+  // 画像処理（最大4枚）
+  document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.getElementById('imageInput');
+    const imageBase64Input = document.getElementById('imageBase64Input');
+    const canvas = document.getElementById('imageCanvas');
 
-    <script>
-    // 画像処理（最大4枚）
-    document.addEventListener('DOMContentLoaded', function() {
-      const imageInput = document.getElementById('imageInput');
-      const imageBase64Input = document.getElementById('imageBase64Input');
-      const canvas = document.getElementById('imageCanvas');
+    imageInput.addEventListener('change', function() {
+      if (imageInput.files.length < 1) {
+        imageBase64Input.value = '';
+        return;
+      }
 
-      imageInput.addEventListener('change', function() {
-        if (imageInput.files.length < 1) {
-          imageBase64Input.value = '';
+      // 最大4枚まで処理
+      const files = Array.from(imageInput.files).slice(0, 4);
+      const base64Array = [];
+      let processedCount = 0;
+
+      files.forEach((file) => {
+        if (!file.type.startsWith('image/')) {
+        	processedCount++;
+          if (processedCount === files.length) {
+            imageBase64Input.value = JSON.stringify(base64Array);
+          }
           return;
         }
 
-        // 最大4枚まで処理
-        const files = Array.from(imageInput.files).slice(0, 4);
-        const base64Array = [];
-        let processedCount = 0;
+        const reader = new FileReader();
+        const image = new Image();
 
-        files.forEach((file) => {
-          if (!file.type.startsWith('image/')) {
+        reader.onload = () => {
+          image.onload = () => {
+            const originalWidth = image.naturalWidth;
+            const originalHeight = image.naturalHeight;
+            const maxLength = 1000;
+
+            if (originalWidth <= maxLength && originalHeight <= maxLength) {
+              canvas.width = originalWidth;
+              canvas.height = originalHeight;
+            } else if (originalWidth > originalHeight) {
+              canvas.width = maxLength;
+              canvas.height = maxLength * originalHeight / originalWidth;
+            } else {
+              canvas.width = maxLength * originalWidth / originalHeight;
+              canvas.height = maxLength;
+            }
+
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            const base64 = canvas.toDataURL();
+            base64Array.push(base64);
+
             processedCount++;
+
             if (processedCount === files.length) {
               imageBase64Input.value = JSON.stringify(base64Array);
             }
-            return;
-          }
-
-          const reader = new FileReader();
-          const image = new Image();
-
-          reader.onload = () => {
-            image.onload = () => {
-              const originalWidth = image.naturalWidth;
-              const originalHeight = image.naturalHeight;
-              const maxLength = 1000;
-
-              if (originalWidth <= maxLength && originalHeight <= maxLength) {
-                canvas.width = originalWidth;
-                canvas.height = originalHeight;
-              } else if (originalWidth > originalHeight) {
-                canvas.width = maxLength;
-                canvas.height = maxLength * originalHeight / originalWidth;
-              } else {
-                canvas.width = maxLength * originalWidth / originalHeight;
-                canvas.height = maxLength;
-              }
-
-              const context = canvas.getContext('2d');
-              context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-              const base64 = canvas.toDataURL();
-              base64Array.push(base64);
-
-              processedCount++;
-
-              if (processedCount === files.length) {
-                imageBase64Input.value = JSON.stringify(base64Array);
-              }
-            };
-            image.src = reader.result;
           };
-          reader.readAsDataURL(file);
-        });
+          image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
       });
     });
+  });
 
-    // 無限スクロール
-    const limit = 20;
-    let offset = 0;
-    let loading = false;
-    let allLoaded = false;
+  // 無限スクロール
+  const limit = 20;
+  let offset = 0;
+  let loading = false;
+  let allLoaded = false;
 
-    async function fetchPosts() {
-      if (loading || allLoaded) return;
-      loading = true;
-      const res = await fetch(`/timeline.php?ajax=1&offset=${offset}&limit=${limit}`);
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        allLoaded = true;
-        loading = false;
-        return;
-      }
-      renderPosts(data);
-      offset += data.length;
+  async function fetchPosts() {
+    if (loading || allLoaded) return;
+    loading = true;
+    const res = await fetch(`/timeline.php?ajax=1&offset=${offset}&limit=${limit}`);
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      allLoaded = true;
       loading = false;
+      return;
     }
+    renderPosts(data);
+    offset += data.length;
+    loading = false;
+  }
 
-    function renderPosts(list) {
-      const container = document.getElementById('posts');
-      if (!container) return;
+  function renderPosts(list) {
+    const container = document.getElementById('posts');
+    if (!container) return;
       
-      list.forEach(p => {
-        const postElement = document.createElement('dl');
-        postElement.style.marginBottom = '1em';
-        postElement.style.paddingBottom = '1em';
-        postElement.style.borderBottom = '1px solid #ccc';
+    list.forEach(p => {
+      const postElement = document.createElement('dl');
+      postElement.style.marginBottom = '1em';
+      postElement.style.paddingBottom = '1em';
+      postElement.style.borderBottom = '1px solid #ccc';
         
-        // 画像を配列で取得（nullでないもののみ）
-        const images = [];
-        for (let i = 1; i <= 4; i++) {
-          const imageKey = 'image_filename' + i;
-          if (p[imageKey]) {
-            images.push(p[imageKey]);
-          }
+      // 画像を配列で取得（nullでないもののみ）
+      const images = [];
+      for (let i = 1; i <= 4; i++) {
+        const imageKey = 'image_filename' + i;
+        if (p[imageKey]) {
+          images.push(p[imageKey]);
         }
-
-        // 画像表示用のHTMLを生成（2列グリッド）
-        let imagesHtml = '';
-        if (images.length > 0) {
-          imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 10px;">';
-          images.forEach(img => {
-            imagesHtml += `<div><img src="/image/${escapeHtml(img)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; max-height: 200px;"></div>`;
-          });
-          imagesHtml += '</div>';
-        }
-        
-        postElement.innerHTML = `
-          <dt id="entry${p.id}">番号</dt>
-          <dd>${escapeHtml(p.id)}</dd>
-          <dt>投稿者</dt>
-          <dd>
-            <a href="/profile.php?user_id=${p.user_id}">
-              ${p.user_icon_filename ? `<img src="/upload/image/${escapeHtml(p.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
-              ${escapeHtml(p.user_name)} (ID: ${escapeHtml(p.user_id)})
-            </a>
-          </dd>
-          <dt>日時</dt>
-          <dd>${escapeHtml(p.created_at)}</dd>
-          <dt>内容</dt>
-          <dd>
-            ${escapeHtml(p.content ?? '')}
-            ${imagesHtml}
-          </dd>
-        `;
-        container.appendChild(postElement);
-      });
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? '').replace(/[&<>"']/g, m =>
-        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
-      );
-    }
-
-    // DOMContentLoadedで実行
-    document.addEventListener('DOMContentLoaded', function() {
-      const sentinel = document.getElementById('sentinel');
-      
-      if (!sentinel) {
-        console.error('sentinel要素が見つかりません');
-        return;
       }
-      
-      const io = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) fetchPosts();
-      });
-      
-      io.observe(sentinel);
-      
-      // 初回ロード
-      fetchPosts();
+
+      // 画像表示用のHTMLを生成（2列グリッド）
+      let imagesHtml = '';
+      if (images.length > 0) {
+        imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 10px;">';
+        images.forEach(img => {
+          imagesHtml += `<div><img src="/image/${escapeHtml(img)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; max-height: 200px;"></div>`;
+        });
+        imagesHtml += '</div>';
+      }
+        
+      postElement.innerHTML = `
+        <dt id="entry${p.id}">番号</dt>
+        <dd>${escapeHtml(p.id)}</dd>
+        <dt>投稿者</dt>
+        <dd>
+          <a href="/profile.php?user_id=${p.user_id}">
+            ${p.user_icon_filename ? `<img src="/upload/image/${escapeHtml(p.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
+            ${escapeHtml(p.user_name)} (ID: ${escapeHtml(p.user_id)})
+          </a>
+        </dd>
+        <dt>日時</dt>
+        <dd>${escapeHtml(p.created_at)}</dd>
+        <dt>内容</dt>
+        <dd>
+          ${escapeHtml(p.content ?? '')}
+          ${imagesHtml}
+        </dd>
+      `;
+      container.appendChild(postElement);
     });
-    </script>
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, m =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+    );
+  }
+
+  // DOMContentLoadedで実行
+  document.addEventListener('DOMContentLoaded', function() {
+    const sentinel = document.getElementById('sentinel');
+      
+    if (!sentinel) {
+      console.error('sentinel要素が見つかりません');
+      return;
+    }
+      
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) fetchPosts();
+    });
+      
+    io.observe(sentinel);
+      
+    // 初回ロード
+    fetchPosts();
+  });
+  </script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 </body>
 </html>
