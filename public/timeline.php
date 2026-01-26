@@ -99,27 +99,12 @@ if (!empty($_GET['ajax'])) {
   exit;
 }
 
-// bodyのHTMLを出力するための関数を用意する
-function bodyFilter (?string $body): string
-{
-  if ($body === null || $body === '') {
-    return '';
-  }
-  
-  $body = htmlspecialchars($body); // エスケープ処理
-  $body = nl2br($body); // 改行文字を<br>要素に変換
-
-  // >>1といった文字列を該当番号の投稿へのページ内リンクとする（レスアンカー機能）
-  // 「>」（半角の大なり記号）はhtmlspecialchars()でエスケープされているため注意
-  $body = preg_replace('/&gt;&gt;(\d+)/', '<a href="#entry$1">&gt;&gt;$1</a>', $body);
-
-  return $body;
-}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
     <title>タイムライン</title>
 <!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
@@ -138,22 +123,23 @@ function bodyFilter (?string $body): string
     
   <!-- 投稿フォーム -->
   <form method="POST" action="./timeline.php">
-      <textarea name="body" required></textarea>
-      <div style="margin: 1em 0;">
-        <label>画像（最大4枚）</label>
-        <input type="file" accept="image/*" name="image" id="imageInput" multiple>
-      </div>
-      <input id="imageBase64Input" type="hidden" name="image_base64">
-      <canvas id="imageCanvas" style="display: none;"></canvas>
-      <button type="submit">送信</button>
-    </form>
-    <hr>
+    <textarea name="body" required></textarea>
+    <div style="margin: 1em 0;">
+      <label>画像（最大4枚）</label>
+      <input type="file" accept="image/*" name="image" id="imageInput" multiple>
+    	<input id="imageBase64Input" type="hidden" name="image_base64">
+    	<canvas id="imageCanvas" style="display: none;"></canvas>
+    	<button type="submit">送信</button>
+		</div>
+  </form>
+  <hr>
 
-    <!-- 投稿を表示するコンテナ（JavaScriptで描画される） -->
-    <div class="container" id="posts"></div>
+  <!-- 投稿を表示するコンテナ（JavaScriptで描画される） -->
+  <div class="container" id="posts"></div>
     
-    <!-- スクロール監視用の要素 -->
-    <div id="sentinel" style="height: 1px;"></div>
+  <!-- スクロール監視用の要素 -->
+  <div id="sentinel" style="height: 1px;"></div>
+
   <script>
   // 画像処理（最大4枚）
   document.addEventListener('DOMContentLoaded', function() {
@@ -246,7 +232,7 @@ function bodyFilter (?string $body): string
     if (!container) return;
       
     list.forEach(p => {
-      const postElement = document.createElement('dl');
+      const postElement = document.createElement('div');
       postElement.style.marginBottom = '1em';
       postElement.style.paddingBottom = '1em';
       postElement.style.borderBottom = '1px solid #ccc';
@@ -271,22 +257,19 @@ function bodyFilter (?string $body): string
       }
         
       postElement.innerHTML = `
-        <dt id="entry${p.id}">番号</dt>
-        <dd>${escapeHtml(p.id)}</dd>
-        <dt>投稿者</dt>
-        <dd>
-          <a href="/profile.php?user_id=${p.user_id}">
-            ${p.user_icon_filename ? `<img src="/upload/image/${escapeHtml(p.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
-            ${escapeHtml(p.user_name)} (ID: ${escapeHtml(p.user_id)})
-          </a>
-        </dd>
-        <dt>日時</dt>
-        <dd>${escapeHtml(p.created_at)}</dd>
-        <dt>内容</dt>
-        <dd>
+				<div style="display: flex;">
+        	<div>
+          	<a href="/profile.php?user_id=${p.user_id}">
+            	${p.user_icon_filename ? `<img src="/image/${escapeHtml(p.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
+            	${escapeHtml(p.user_name)} (ID: ${escapeHtml(p.user_id)})
+          	</a>
+        	</div>
+       		<div style="margin-left: auto;">${escapeHtml(p.created_at)}</div>
+				</div>
+        <div>
           ${escapeHtml(p.content ?? '')}
           ${imagesHtml}
-        </dd>
+        </div>
       `;
       container.appendChild(postElement);
     });
