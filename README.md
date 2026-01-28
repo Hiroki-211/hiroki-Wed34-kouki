@@ -44,7 +44,7 @@ sshの場合は一度ログアウトしログインしなおすことで反映�
 
 ## 4. ビルド＆起動
 
-    cd hiroki-Wed34
+    cd hiroki-Wed34-kouki
 
 ### screenのインストール
 
@@ -71,16 +71,46 @@ aptの場合(debian ubuntu などの場合)
 
 作成したDockerコンテナ内のMySQLサーバーにmysqlコマンドで接続する
 
-    docker compose exec mysql mysql example_db
+    docker compose exec mysql mysql example_db 
 
-掲示板の投稿を保存するテーブルを作成する  
+#### 会員テーブル
 
-    CREATE TABLE `bbs_entries` (
-        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        `body` TEXT NOT NULL,
-        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-        `image_filename` TEXT DEFAULT NULL
-    ); 
+	CREATE TABLE users (
+    	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    	username VARCHAR(50) NOT NULL,
+    	email VARCHAR(255) UNIQUE NOT NULL,
+    	password VARCHAR(255) NOT NULL,
+    	icon_filename VARCHAR(255) DEFAULT NULL,
+    	introduction TEXT DEFAULT NULL;
+    	cover_filename VARCHAR(255) DEFAULT NULL;
+    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+#### 投稿テーブル
+
+	CREATE TABLE posts (
+    	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    	user_id INT UNSIGNED NOT NULL,
+    	content TEXT,
+    	image_filename1 VARCHAR(255) DEFAULT NULL,
+    	image_filename2 VARCHAR(255) DEFAULT NULL,
+    	image_filename3 VARCHAR(255) DEFAULT NULL,
+    	image_filename4 VARCHAR(255) DEFAULT NULL,
+    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+
+#### フォロー関係テーブル
+
+	CREATE TABLE user_relationships (
+    	id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    	followee_user_id INT UNSIGNED NOT NULL,
+    	follower_user_id INT UNSIGNED NOT NULL,
+    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    	FOREIGN KEY (followee_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    	FOREIGN KEY (follower_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    	UNIQUE KEY unique_follow (follower_user_id, followee_user_id)
+	);
 
 上記のコマンドで起動できたら、ウェブブラウザでEC2インスタンスのホスト名またはIPアドレス(SSHでログインするときと同じもの)に接続する。  
 
