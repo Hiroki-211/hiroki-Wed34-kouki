@@ -82,7 +82,7 @@ aptの場合(debian ubuntu などの場合)
     	password VARCHAR(255) NOT NULL,
     	icon_filename VARCHAR(255) DEFAULT NULL,
     	introduction TEXT DEFAULT NULL;
-    	cover_filename VARCHAR(255) DEFAULT NULL;
+    	cover_filename VARCHAR(255) DEFAULT NULL,
     	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
