@@ -159,6 +159,7 @@ if (!empty($_GET['ajax'])) {
       let processedCount = 0;
 
       files.forEach((file) => {
+				// 画像以外はスキップ
         if (!file.type.startsWith('image/')) {
         	processedCount++;
           if (processedCount === files.length) {
@@ -176,6 +177,7 @@ if (!empty($_GET['ajax'])) {
             const originalHeight = image.naturalHeight;
             const maxLength = 1000;
 
+						// リサイズ計算（最大1000px）
             if (originalWidth <= maxLength && originalHeight <= maxLength) {
               canvas.width = originalWidth;
               canvas.height = originalHeight;
@@ -186,15 +188,16 @@ if (!empty($_GET['ajax'])) {
               canvas.width = maxLength * originalWidth / originalHeight;
               canvas.height = maxLength;
             }
-
+						// Canvasに画像を描画
             const context = canvas.getContext('2d');
             context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
+						// Base64形式に変換して配列に追加
             const base64 = canvas.toDataURL();
             base64Array.push(base64);
 
             processedCount++;
 
+						// 全て完了したらJSON形式で保存
             if (processedCount === files.length) {
               imageBase64Input.value = JSON.stringify(base64Array);
             }
@@ -213,10 +216,14 @@ if (!empty($_GET['ajax'])) {
   let allLoaded = false;
 
   async function fetchPosts() {
+		// 読み込み中または全件取得済みなら終了
     if (loading || allLoaded) return;
     loading = true;
+
+		// サーバーから投稿を取得
     const response = await fetch(`/timeline.php?ajax=1&offset=${offset}&limit=${limit}`);
     const posts = await response.json();
+		// データがなければ終了
     if (!Array.isArray(posts) || posts.length === 0) {
       allLoaded = true;
       loading = false;
@@ -228,9 +235,11 @@ if (!empty($_GET['ajax'])) {
   }
 
   function renderPosts(list) {
+		// 投稿を表示するコンテナ要素を取得
     const container = document.getElementById('posts');
     if (!container) return;
       
+		// 投稿要素を作成
     list.forEach(post => {
       const postElement = document.createElement('div');
       postElement.style.marginBottom = '1em';
@@ -245,10 +254,12 @@ if (!empty($_GET['ajax'])) {
           images.push(post[imageKey]);
         }
       }
+			// 画像のHTMLを作成
 			const imagesHtml = images.map(img => 
   			`<img src="/image/${escapeHtml(img)}" style="max-width: 300px; margin: 5px;">`
 			).join('');
 
+			// 投稿全体のHTML
 			postElement.innerHTML = `
 				<div style="display: flex;">
         	<div>
@@ -266,6 +277,7 @@ if (!empty($_GET['ajax'])) {
           ${imagesHtml}
         </div>
       `;
+			// 投稿をコンテナに追加
       container.appendChild(postElement);
     });
   }
