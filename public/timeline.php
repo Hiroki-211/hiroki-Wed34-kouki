@@ -215,15 +215,15 @@ if (!empty($_GET['ajax'])) {
   async function fetchPosts() {
     if (loading || allLoaded) return;
     loading = true;
-    const res = await fetch(`/timeline.php?ajax=1&offset=${offset}&limit=${limit}`);
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) {
+    const response = await fetch(`/timeline.php?ajax=1&offset=${offset}&limit=${limit}`);
+    const posts = await response.json();
+    if (!Array.isArray(posts) || posts.length === 0) {
       allLoaded = true;
       loading = false;
       return;
     }
-    renderPosts(data);
-    offset += data.length;
+    renderPosts(posts);
+    offset += posts.length;
     loading = false;
   }
 
@@ -231,7 +231,7 @@ if (!empty($_GET['ajax'])) {
     const container = document.getElementById('posts');
     if (!container) return;
       
-    list.forEach(p => {
+    list.forEach(post => {
       const postElement = document.createElement('div');
       postElement.style.marginBottom = '1em';
       postElement.style.paddingBottom = '1em';
@@ -241,8 +241,8 @@ if (!empty($_GET['ajax'])) {
       const images = [];
       for (let i = 1; i <= 4; i++) {
         const imageKey = 'image_filename' + i;
-        if (p[imageKey]) {
-          images.push(p[imageKey]);
+        if (post[imageKey]) {
+          images.push(post[imageKey]);
         }
       }
 
@@ -259,15 +259,15 @@ if (!empty($_GET['ajax'])) {
       postElement.innerHTML = `
 				<div style="display: flex;">
         	<div>
-          	<a href="/profile.php?user_id=${p.user_id}">
-            	${p.user_icon_filename ? `<img src="/image/${escapeHtml(p.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
-            	${escapeHtml(p.user_name)} (ID: ${escapeHtml(p.user_id)})
+          	<a href="/profile.php?user_id=${post.user_id}">
+            	${post.user_icon_filename ? `<img src="/image/${escapeHtml(post.user_icon_filename)}" style="height: 2em; width: 2em; border-radius: 50%; object-fit: cover;">` : ''}
+            	${escapeHtml(post.user_name)} (ID: ${escapeHtml(post.user_id)})
           	</a>
         	</div>
-       		<div style="margin-left: auto;">${escapeHtml(p.created_at)}</div>
+       		<div style="margin-left: auto;">${escapeHtml(post.created_at)}</div>
 				</div>
         <div>
-          ${escapeHtml(p.content ?? '')}
+          ${escapeHtml(post.content ?? '')}
           ${imagesHtml}
         </div>
       `;
@@ -275,11 +275,12 @@ if (!empty($_GET['ajax'])) {
     });
   }
 
-  function escapeHtml(str) {
-    return String(str ?? '').replace(/[&<>"']/g, m =>
-      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
-    );
-  }
+	// XSS対策に
+	function escapeHtml(str) {
+  	const div = document.createElement('div');
+  	div.textContent = str;
+  	return div.innerHTML;
+	}
 
   // DOMContentLoadedで実行
   document.addEventListener('DOMContentLoaded', function() {
@@ -290,16 +291,15 @@ if (!empty($_GET['ajax'])) {
       return;
     }
       
-    const io = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) fetchPosts();
     });
       
-    io.observe(sentinel);
+    observer.observe(sentinel);
       
     // 初回ロード
     fetchPosts();
   });
   </script>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 </body>
 </html>
