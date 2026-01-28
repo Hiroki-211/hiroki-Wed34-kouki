@@ -245,18 +245,11 @@ if (!empty($_GET['ajax'])) {
           images.push(post[imageKey]);
         }
       }
+			const imagesHtml = images.map(img => 
+  			`<img src="/image/${escapeHtml(img)}" style="max-width: 300px; margin: 5px;">`
+			).join('');
 
-      // 画像表示用のHTMLを生成（2列グリッド）
-      let imagesHtml = '';
-      if (images.length > 0) {
-        imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 10px;">';
-        images.forEach(img => {
-          imagesHtml += `<div><img src="/image/${escapeHtml(img)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; max-height: 200px;"></div>`;
-        });
-        imagesHtml += '</div>';
-      }
-        
-      postElement.innerHTML = `
+			postElement.innerHTML = `
 				<div style="display: flex;">
         	<div>
           	<a href="/profile.php?user_id=${post.user_id}">
@@ -268,6 +261,8 @@ if (!empty($_GET['ajax'])) {
 				</div>
         <div>
           ${escapeHtml(post.content ?? '')}
+				</div>
+				<div>
           ${imagesHtml}
         </div>
       `;
@@ -275,7 +270,7 @@ if (!empty($_GET['ajax'])) {
     });
   }
 
-	// XSS対策に
+	// XSS対策
 	function escapeHtml(str) {
   	const div = document.createElement('div');
   	div.textContent = str;
