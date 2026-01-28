@@ -40,7 +40,7 @@ sshの場合は一度ログアウトしログインしなおすことで反映�
 
 ## 3. ソースコードの配置
 
-    git clone https://github.com/Hirooki-211/hiroki-Wed34-kouki.git
+    git clone https://github.com/Hiroki-211/hiroki-Wed34-kouki.git
 
 ## 4. ビルド＆起動
 
