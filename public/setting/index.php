@@ -31,4 +31,5 @@ $user = $select_sth->fetch();
   <li><a href="./icon.php">アイコン設定</a></li>
   <li><a href="./cover.php">カバー画像設定</a></li>
   <li><a href="./introduction.php">自己紹介文設定</a></li>
+	<li><a href="../logout.php">ログアウト</a></li>
 </ul>
