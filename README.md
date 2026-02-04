@@ -17,9 +17,11 @@ sshの場合は一度ログアウトしログインしなおすことで反映�
   　
 ### Docker Composeのインストール
 
-    sudo mkdir -p /usr/local/lib/docker/cli-plugins/
-    sudo curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
-    sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+```
+sudo mkdir -p /usr/local/lib/docker/cli-plugins/
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.36.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+```
 
 インストールできたかの確認
 
@@ -50,12 +52,6 @@ sshの場合は一度ログアウトしログインしなおすことで反映�
 
 多くのLinuxディストリビューションでは標準で入っていますが，インストール方法は以下の通りです。  
 
-yumの場合(amazon linux2, centos, redhat などの場合)
-
-    sudo yum install screen -y
-
-aptの場合(debian ubuntu などの場合)
-
     sudo apt install screen -y
 
 ### screenを起動する
@@ -75,6 +71,7 @@ aptの場合(debian ubuntu などの場合)
 
 #### 会員テーブル
 
+```sql
 	CREATE TABLE users (
     	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     	username VARCHAR(50) NOT NULL,
@@ -85,9 +82,11 @@ aptの場合(debian ubuntu などの場合)
     	cover_filename VARCHAR(255) DEFAULT NULL,
     	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
+```
 
 #### 投稿テーブル
 
+```sql
 	CREATE TABLE posts (
     	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     	user_id INT UNSIGNED NOT NULL,
@@ -99,9 +98,11 @@ aptの場合(debian ubuntu などの場合)
     	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	);
+```
 
 #### フォロー関係テーブル
 
+```sql
 	CREATE TABLE user_relationships (
     	id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     	followee_user_id INT UNSIGNED NOT NULL,
@@ -111,6 +112,7 @@ aptの場合(debian ubuntu などの場合)
     	FOREIGN KEY (follower_user_id) REFERENCES users(id) ON DELETE CASCADE,
     	UNIQUE KEY unique_follow (follower_user_id, followee_user_id)
 	);
+```
 
 上記のコマンドで起動できたら、ウェブブラウザでEC2インスタンスのホスト名またはIPアドレス(SSHでログインするときと同じもの)に接続する。  
 
