@@ -39,19 +39,6 @@ docker compose version
 sudo yum install git -y
 ```
 
-初期設定
-
-```sh
-git config --global init.defaultBranch main
-```
-
-名前とメールアドレスを設定する。メールアドレスはGitHubに登録しているものと同一のものにする。
-
-```sh
-git config --global user.name "お名前 ほげ太郎"
-git config --global user.email "kokoni-mail-address-iretene@example.com"
-```
-
 ## 3. ソースコードの配置
 
 ```sh
@@ -64,20 +51,6 @@ git clone https://github.com/Hiroki-211/hiroki-Wed34-kouki.git
 cd hiroki-Wed34-kouki
 ```
 
-### screenのインストール
-
-多くのLinuxディストリビューションでは標準で入っていますが，インストール方法は以下の通りです。  
-
-```sh
-sudo apt install screen -y
-```
-
-### screenを起動する
-
-```sh
-screen
-```
-
 ### docker composeをビルド・起動する
 
 ```sh
@@ -87,7 +60,7 @@ docker compose up
 
 ## 5. テーブルの作成
 
-作成したDockerコンテナ内のMySQLサーバーにmysqlコマンドで接続する
+別のターミナルで以下のコマンドを実行し、Dockerコンテナ内のmysqlサーバーにmysqlコマンドで接続する
 
 ```sh
 docker compose exec mysql mysql example_db 
@@ -96,46 +69,46 @@ docker compose exec mysql mysql example_db
 #### 会員テーブル
 
 ```sql
-	CREATE TABLE users (
-    	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    	username VARCHAR(50) NOT NULL,
-    	email VARCHAR(255) UNIQUE NOT NULL,
-    	password VARCHAR(255) NOT NULL,
-    	icon_filename VARCHAR(255) DEFAULT NULL,
-    	introduction TEXT DEFAULT NULL,
-    	cover_filename VARCHAR(255) DEFAULT NULL,
-    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);
+CREATE TABLE users (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    icon_filename VARCHAR(255) DEFAULT NULL,
+    introduction TEXT DEFAULT NULL,
+    cover_filename VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 #### 投稿テーブル
 
 ```sql
-	CREATE TABLE posts (
-    	id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    	user_id INT UNSIGNED NOT NULL,
-    	content TEXT,
-    	image_filename1 VARCHAR(255) DEFAULT NULL,
-    	image_filename2 VARCHAR(255) DEFAULT NULL,
-    	image_filename3 VARCHAR(255) DEFAULT NULL,
-    	image_filename4 VARCHAR(255) DEFAULT NULL,
-    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-	);
+CREATE TABLE posts (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    content TEXT,
+    image_filename1 VARCHAR(255) DEFAULT NULL,
+    image_filename2 VARCHAR(255) DEFAULT NULL,
+    image_filename3 VARCHAR(255) DEFAULT NULL,
+    image_filename4 VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 ```
 
 #### フォロー関係テーブル
 
 ```sql
-	CREATE TABLE user_relationships (
-    	id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    	followee_user_id INT UNSIGNED NOT NULL,
-    	follower_user_id INT UNSIGNED NOT NULL,
-    	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    	FOREIGN KEY (followee_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    	FOREIGN KEY (follower_user_id) REFERENCES users(id) ON DELETE CASCADE,
-    	UNIQUE KEY unique_follow (follower_user_id, followee_user_id)
-	);
+CREATE TABLE user_relationships (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    followee_user_id INT UNSIGNED NOT NULL,
+    follower_user_id INT UNSIGNED NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (followee_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (follower_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_follow (follower_user_id, followee_user_id)
+);
 ```
 
 上記のコマンドで起動できたら、ウェブブラウザでEC2インスタンスのホスト名またはIPアドレス(SSHでログインするときと同じもの)に接続する。  
